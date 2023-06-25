@@ -8,7 +8,7 @@ yt = YD(url)
 
 yt.get_title()
 sleep(1)
-yt.streams_menu
+yt.streams_menu()
 yt.select_folder()
 yt.download()
 yt.openFile()
