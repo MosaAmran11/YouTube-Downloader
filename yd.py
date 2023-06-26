@@ -97,13 +97,14 @@ class YD:
         else:
             self.__yt = YouTube(self.link)
             self.__ob_type = "YouTube"
-            self.__title = None
+            self.__title = self.__yt.title
             self.__streams = self.__yt.streams
             self.path = YD.PATH
             YD.set_object_title(self)
 
     def prepare_playlist(self):
         for video in self.__plvideo:
+            self.__title = video.title
             YD.set_object_title(self)
             self.__streams = video.streams
             self.__itag = self.__streams.get_by_itag(self.__streams[0].itag)
@@ -113,29 +114,30 @@ class YD:
         spell = "Getting information..."
         YD.spelling(spell)
 
-        title = self.__yt.title
-        specialChar = "!@#$%^&*_+=\";:'.,<>/?`~{}[]\\|"
+        title = self.__title
+        specialChar = "!@#$%^&*+=\";:'.,<>/?`~{}[]\\|"
 
         for char in specialChar:
             title = title.replace(char, "")
 
-        if self.__ob_type == "YouTube":
-            global LOG_FILE
-            try:
-                LOG_FILE = open(os.path.join(
-                    os.path.dirname(__file__), ".log.txt"))
-                read = LOG_FILE.read()
-                LOG_FILE.close()
-            except FileNotFoundError:
-                read = ''
+        # Return the condition to "Youtube" if something wrong with titling.
+        # if self.__ob_type == "Playlist":
+            # global LOG_FILE
+            # try:
+            #     LOG_FILE = open(os.path.join(
+            #         os.path.dirname(__file__), ".log.txt"))
+            #     read = LOG_FILE.read()
+            #     LOG_FILE.close()
+            # except FileNotFoundError:
+            #     read = ''
 
-            if title in read:
-                for i in range(2, 11):
-                    if f"{title} ({i})" in read:
-                        continue
-                    else:
-                        title += f" ({i})"
-                        break
+            # if title in YD.titles:
+            #     for i in range(2, 11):
+            #         if f"{title} ({i})" in YD.titles:
+            #             continue
+            #         else:
+            #             title += f" ({i})"
+            #             break
 
         self.__title = title
 
@@ -199,8 +201,12 @@ class YD:
                          )
 
     def streamVideo(self):
-        resolution = self.__streams.get_by_itag(self.__itag).resolution
-        vidName = f"{self.__title}.{self.__video_extention}"
+        if self.__streams.get_by_itag(self.__itag).is_progressive:
+            resolution = self.__streams.get_by_itag(self.__itag).resolution
+            vidName = f"{self.__title}_{resolution}.{self.__video_extention}"
+        else:
+            vidName = f"{self.__title}.{self.__video_extention}"
+
         audName = f"{self.__title}_audio.{self.__audio_extention}"
 
         self.__streams.get_by_itag(self.__itag).download(
@@ -220,16 +226,21 @@ class YD:
     def downloadPlaylist(self):
         """Start downloading the playlist's videos."""
 
-        YD.__set_filename(self)
-
         for video in self.__plvideo:
-            self.__ob_type = "YouTube"
+            # self.__ob_type = "YouTube"  # Return this code if there is something wrong with titling.
 
+            self.__title = video.title
             YD.set_object_title(self)
 
-            if os.path.exists(os.path.join(self.path, f"{self.filename}.{'mp4' if self.__type == 'video' else 'mp3'}")):
-                print(f"{self.__type.capitalize()} existing")
-                continue
+            if self.__title in YD.titles:
+                for i in range(2, 11):
+                    if f"{self.__title} ({i})" in YD.titles:
+                        continue
+                    else:
+                        self.__title += f" ({i})"
+                        break
+
+            YD.__set_filename(self)
 
             spell = f'{YD.yellow}Preparing the {self.__type.capitalize()}: {YD.green}"{self.__title}"{YD.rset}'
             YD.spelling(spell)
@@ -237,6 +248,7 @@ class YD:
             self.__streams = video.streams
 
             YD.downloadVideo(self)
+            YD.titles.add(self.__title)
 
         spell = f'All {self.__type}s downloaded successfully.'.title(
         )
@@ -246,25 +258,27 @@ class YD:
 
     def downloadVideo(self):
         """Start downloading the video."""
-
-        YD.__set_filename(self)
         YD.set_file_extention(self)
         YD.display_download_process(self.__type)
 
         # Stream only Audio.
         if self.__type.startswith("audio"):
-            if not os.path.exists(os.path.join(self.path, f"{self.__title}.mp3")):
+            if not os.path.exists(os.path.join(self.path, f"{self.filename}.mp3")):
                 YD.streamAudio(self)
 
         # Stream Video with Audio.
         else:
-            if not os.path.exists(os.path.join(self.path, f"{self.__title}.mp4")):
-                YD.streamVideo(self)
+            if self.__streams.get_by_itag(self.__itag).is_progressive:
+                if not os.path.exists(os.path.join(self.path, f"{self.filename}.{self.__video_extention}")):
+                    YD.streamVideo(self)
+            else:
+                if not os.path.exists(os.path.join(self.path, f"{self.filename}.mp4")):
+                    YD.streamVideo(self)
 
-        LOG_FILE = open(os.path.join(
-            os.path.dirname(__file__), ".log.txt"), "a")
-        LOG_FILE.write(self.__title + "\n")
-        LOG_FILE.close()
+        # LOG_FILE = open(os.path.join(
+        #     os.path.dirname(__file__), ".log.txt"), "a")
+        # LOG_FILE.write(self.__title + "\n")
+        # LOG_FILE.close()
 
         spell = f'{YD.green}The {self.__type} is downloaded successfully.{YD.rset}'
         YD.spelling(spell)
@@ -274,11 +288,11 @@ class YD:
     def download(self):
         try:
             if self.__ob_type == "YouTube":
+                YD.set_object_title(self)
+                YD.__set_filename(self)
                 self.downloadVideo()
             else:
                 self.downloadPlaylist()
-            os.remove(os.path.join(
-                os.path.dirname(__file__), ".log.txt"))
         except KeyboardInterrupt:
             print(f"\n\n{YD.red}Exited by user.{YD.rset}")
             exit()
@@ -289,15 +303,18 @@ class YD:
 
     def openFile(self):
         """Open the file with the default media player"""
-        OPEN_FILE = "xdg-open " if os.name != "nt" else ""
-
-        if self.__type == "video":
-            path = os.path.join(self.path, f"{self.filename}.mp4")
+        if self.__ob_type == "Playlist":
+            YD.openFileDir(self)
         else:
-            path = os.path.join(self.path, f"{self.__title}.mp3")
+            OPEN_FILE = "xdg-open " if os.name != "nt" else ""
 
-        os.system(
-            f'{OPEN_FILE}"{path}"')
+            if self.__type == "video":
+                path = os.path.join(self.path, f"{self.filename}.mp4")
+            else:
+                path = os.path.join(self.path, f"{self.__title}.mp3")
+
+            os.system(
+                f'{OPEN_FILE}"{path}"')
 
     def streams_menu(self):
         # Displaying the resolutions' menu.
@@ -329,6 +346,7 @@ class YD:
             except ValueError:
                 print(f'{YD.red}That is not a number!{YD.rset}')
 
+        YD.set_file_extention(self)
         os.system(YD.clear)
 
     @property
