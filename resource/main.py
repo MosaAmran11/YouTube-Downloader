@@ -1,10 +1,12 @@
 from video import Video
+from audio import Audio
+from playlist import Playlist
 from time import sleep
-from gui import GUI
+from gui import *
 from os import system
 from vars import *
 from litfun import *
-from requests.exceptions import HTTPError
+from http.client import IncompleteRead
 
 
 def is_playlist(url):
@@ -24,51 +26,68 @@ def check_url(link: str) -> str:
                 f'{yellow}Please enter a valid YouTube url: {rset}')
 
 
-def download_video():
-    vd.select_detail()
-    if ui.ask_select_dir(message='Would you like to select a folder to download in?'):
-        vd.path = ui.select_dir()
+def download(object: Video):
+    system(clear)
+    show_title(object.title)
+    sleep(0.5)
+    object.select_detail()
+    if ask_select_dir(message='Would you like to select a folder to download in?'):
+        object.path = select_dir()
     system(clear)
     show_download_message()
-    vd.download()
+    object.download()
     system(clear)
     print(green, end='')
     spelling("The Video is downloaded successfully.")
     print(rset)
-    ui.opendir()
+    opendir(object.path)
     exit_message()
 
 
-def download_all_resolutions(
-        media_type: str | None = 'mp4'
-) -> None:
-    if ui.ask_select_dir(message='Would you like to select a folder to download in?'):
-        vd.path = ui.select_dir()
-    vd.download_all_resolutions(subtype=media_type)
+def download_playlist(object: Playlist):
     system(clear)
-    print(green, end='')
-    spelling("All Videos are downloaded successfully.")
-    print(rset)
-    ui.opendir(vd.path)
+    show_title(object.title, object.type)
+    sleep(1)
+    object.download()
+    opendir(object.path)
     exit_message()
 
 
+system(clear)
+url = input("\nEnter a YouTube Link -> ")
+url = check_url(url)
+system(clear)
 try:
-    system(clear)
-    while True:
+    for _ in range(4):
         try:
-            vd = Video(check_url(input("\nEnter a YouTube Link -> ")))
-            break
+            if is_playlist(url):
+                obj = Playlist(url)
+                break
+            else:
+                if ask_video_audio(
+                    "Would you like to download as Video or Audio?"
+                ):
+                    obj = Video(url)
+                else:
+                    obj = Audio(url)
+                break
         except:
-            pass
-    system(clear)
-    show_title(vd.title)
-    ui = GUI(vd.path)
-    sleep(0.5)
-    print(cyan, end='')
-    spelling("Loading video information...")
-    print(rset)
-    download_all_resolutions()
+            print("Trying to reconnect...")
+            sleep(1)
+    else:
+        print(red, "Cannot connect to the server.", sep='')
+        print("Please check you interner connection and try again.", rset)
+        exit()
+
+    if is_playlist:
+        download_playlist(obj)
+    else:
+        download(obj)
+
 except KeyboardInterrupt:
-    print(red, "Exited by user.", rset)
+    print(red, "Operation cancelled by user", rset)
+    exit()
+except IncompleteRead:
+    spelling(red, "Internet connection has inturrupted.")
+    spelling("Please check your internet connection and try again.", rset)
     exit()

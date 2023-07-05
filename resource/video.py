@@ -1,11 +1,14 @@
-from pytube import YouTube
-from pytube.cli import _unique_name, safe_filename
-from convert import merge_video
-from time import sleep
-from litfun import show_download_message
-from vars import *
-from http.client import RemoteDisconnected
-import os
+try:
+    from pytube import YouTube
+    from pytube.cli import _unique_name, safe_filename
+    from convert import merge_video
+    from time import sleep
+    from litfun import show_download_message
+    from vars import *
+    from http.client import RemoteDisconnected
+    import os
+except ImportError:
+    from .. import install_requirements
 
 
 class Video:
@@ -13,11 +16,12 @@ class Video:
         self.video = YouTube(url)
         self.__title = None
         self.__streams = None
-        self.__video_stream = None
+        self.__selected_stream = None
         self.__resolution = None
         self.__path = None
         self.__ext = None
         self.__itag = None
+        self.type = 'video'
 
     @property
     def title(self):
@@ -26,6 +30,10 @@ class Video:
         self.__title = self.video.title
         return self.__title
 
+    @title.setter
+    def title(self, title):
+        self.__title = title
+
     @property
     def streams(self):
         if self.__streams:
@@ -33,10 +41,17 @@ class Video:
         for _ in range(4):
             try:
                 self.__streams = self.video.streams.filter(
-                    type='video')
+                    only_video=True,
+                    subtype='mp4'
+                )
+                if not self.__streams:
+                    self.__streams = self.video.streams.filter(
+                        only_video=True
+                    )
                 return self.__streams
             except RemoteDisconnected:
                 print("Trying to connect...")
+                sleep(1)
         else:
             print("Cannot connect to server. Exiting.")
             exit()
@@ -45,7 +60,7 @@ class Video:
     def resolution(self):
         if self.__resolution:
             return self.__resolution
-        self.__resolution = self.video_stream.resolution
+        self.__resolution = self.selected_stream.resolution
         return self.__resolution
 
     @property
@@ -56,12 +71,14 @@ class Video:
         if os.name == 'nt':
             userprofile = os.getenv("userprofile")
             path = str(os.path.join(
-                userprofile, 'Downloads', APP_NAME, "Video"))
+                userprofile, 'Downloads',
+                APP_NAME, self.type.capitalize()))
         else:
             userprofile = os.getenv("USER") if os.getenv(
                 'SUDO_USER') is None else os.getenv('SUDO_USER')
             path = str(os.path.join(
-                "/", "home", userprofile, "Downloads", APP_NAME, "Video"))
+                "/", "home", userprofile, "Downloads",
+                APP_NAME, self.type.capitalize()))
             os.makedirs(path, exist_ok=True)
         self.__path = path
         return self.__path
@@ -78,7 +95,7 @@ class Video:
     def extension(self):
         if self.__ext:
             return self.__ext
-        self.__ext = self.video_stream.subtype
+        self.__ext = self.selected_stream.subtype
         return self.__ext
 
     @property
@@ -88,20 +105,25 @@ class Video:
         self.select_detail()
         return self.__itag
 
+    @itag.setter
+    def itag(self, itag):
+        if not self.__itag:
+            self.__itag = itag
+
     @property
-    def video_stream(self):
-        if self.__video_stream:
-            return self.__video_stream
-        self.__video_stream = self.streams.get_by_itag(self.itag)
-        return self.__video_stream
+    def selected_stream(self):
+        if self.__selected_stream:
+            return self.__selected_stream
+        self.__selected_stream = self.streams.get_by_itag(self.itag)
+        return self.__selected_stream
 
     # Method for user to get video's details
     def get_details(self, adaptive: bool = None):
-        audio_stream = self.video.streams.get_audio_only()
         details = []
         for stream in self.streams.filter(adaptive=adaptive):
             if not stream.is_progressive:
-                audfilesize = audio_stream.filesize
+                audfilesize = self.video.streams.filter(
+                    only_audio=True).order_by("abr").last().filesize
             else:
                 audfilesize = 0
             details.append([stream.resolution,
@@ -116,16 +138,10 @@ class Video:
         details = self.get_details(adaptive=adaptive)
         print("\nSelect a resolution to download:")
         for i in range(len(details)):
-            # Add the word "Resolution" to the detail resolution
-            details[i][0] = "Resolution: " + details[i][0]
-            # Add the word "Size" to the detail filesize
-            details[i][1] = "Approx_Size: " + details[i][1] + " MB"
-            # Add the word "Format" to the detail extension
-            details[i][2] = "Format: " + details[i][2]
             print(f"{cyan}[{i + 1}]{yellow}",
-                  details[i][0],
-                  details[i][1],
-                  details[i][2],
+                  f"Resolution: {details[i][0]}",
+                  f"Approx_Size: {details[i][1]} MB",
+                  f"Format: {details[i][2]}",
                   rset,
                   sep='\t')
             sleep(0.08)
@@ -138,8 +154,6 @@ class Video:
                     if select == len(details) + 1:
                         self.download_all_resolutions()
                         return None
-                    # Rset the variable details and clear the formated text
-                    details = self.get_details()
                     # Set video resolution
                     self.__resolution = details[select - 1][0]
                     # Set video extesion
@@ -150,9 +164,9 @@ class Video:
                     # and quit from function
                     return None
                 else:
-                    print(red, "You entered a number out of range!",
-                          "\nPlease enter a number between 1 and",
-                          len(details), rset, sep='')
+                    print(red, "You entered a number out of range!")
+                    print("Please enter a number between 1 and",
+                          len(details) + 1, rset, sep='')
             except ValueError:
                 print(red, "You have to enter only numbers!", rset, sep='')
 
@@ -162,7 +176,7 @@ class Video:
         title = safe_filename(self.title)
         try:
             # Download progressive stream
-            if self.video_stream.is_progressive:
+            if self.selected_stream.is_progressive:
                 # Set vdieo name with extension
                 video_unique_name = f"{title}_{self.resolution}.{self.extension}"
                 # Check if video doesn't exist
@@ -176,26 +190,22 @@ class Video:
                     self.path,
                     f'{title}_{self.resolution}.{self.extension}'
                 )
-                # Check if video doesn't exist
+                # Check if video exists
                 if os.path.exists(final_path):
                     return None
                 # Stream only audio
                 audio_stream = (
-                    self.video.streams.get_audio_only(self.extension)
+                    self.video.streams.filter(
+                        only_audio=True).order_by("abr").last()
                 )
-                if not audio_stream:
-                    audio_stream = (
-                        self.video.streams.filter(
-                            only_audio=True).order_by("abr").last()
-                    )
                 # Set video name with extension
                 video_unique_name = _unique_name(
                     title,
-                    self.video_stream.subtype,
+                    self.selected_stream.subtype,
                     'video',
                     self.path
                 )
-                # Format audio
+                # Format audio name
                 audio_unique_name = _unique_name(
                     title,
                     audio_stream.subtype,
@@ -203,7 +213,7 @@ class Video:
                     self.path
                 )
                 # Download Only Video
-                self.video_stream.download(
+                self.selected_stream.download(
                     output_path=self.path,
                     filename=video_unique_name,
                     max_retries=3
@@ -224,7 +234,7 @@ class Video:
                     video_path,
                     audio_path,
                     final_path,
-                    self.video_stream.fps
+                    self.selected_stream.fps
                 )
         except KeyboardInterrupt:
             print(red, "Exited by user.", rset)
@@ -261,7 +271,7 @@ class Video:
             self.__itag = stream.itag
             self.__title = stream.title
             self.__resolution = stream.resolution
-            self.__video_stream = stream
+            self.__selected_stream = stream
             if not self.path.endswith(safe_filename(self.title)):
                 self.path = os.path.join(self.path, safe_filename(self.title))
             show_download_message(
