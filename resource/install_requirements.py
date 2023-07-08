@@ -19,7 +19,7 @@ def spelling(spell):
 def run_command(*CMD):
     subprocess.run(
         [*CMD],
-        # capture_output=True
+        capture_output=True
     )
 
 
@@ -75,27 +75,33 @@ def install(package, *packages):
                         pack)
 
 
-try:
+def main():
     try:
-        from pytube import YouTube
-        import easygui
-        from moviepy.editor import VideoFileClip
-    except ImportError:
-        os.system(clear)
-        print("Some requirements will be installed to run this application.")
-        input("Press enter to continue...")
-        os.system(clear)
+        try:
+            from pytube import YouTube
+            import easygui
+            from moviepy.editor import VideoFileClip
+        except ImportError:
+            os.system(clear)
+            print("Some requirements will be installed to run this application.")
+            input("Press enter to continue...")
+            os.system(clear)
 
-        requirements = os.path.join(path, 'requirements.txt')
-        spelling("Installing the requirements...")
-        install(requirements)
+            requirements = os.path.join(path, 'requirements.txt')
+            spelling("Installing the requirements...")
+            spelling("This operation may take a while. Please wait...")
+            install(requirements)
 
-    except:
-        check_requirements()
-except KeyboardInterrupt:
-    print("Operation cancelled by user")
-    exit()
+        except:
+            check_requirements()
+    except KeyboardInterrupt:
+        print("Operation cancelled by user")
+        exit()
 
-spelling("All requirements are installed successfully.")
-sleep(2)
-os.system(clear)
+    spelling("All requirements are installed successfully.")
+    sleep(2)
+    os.system(clear)
+
+
+if __name__ == "__main__":
+    main()

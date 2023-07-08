@@ -1,15 +1,14 @@
 try:
     from pytube import Playlist as plt
-    from pytube.cli import safe_filename
     from vars import *
     from litfun import show_download_message, spelling
-    from time import sleep
     from video import Video
     from audio import Audio
     from gui import ask_video_audio
     import os
 except ImportError:
-    from .. import install_requirements
+    from install_requirements import main
+    main()
 
 
 class Playlist:
@@ -23,6 +22,7 @@ class Playlist:
         self.__video_urls = None
         self.__path = None
         self.__itag = None
+        self.__available_itag = list()
 
     @property
     def title(self):
@@ -93,6 +93,22 @@ class Playlist:
         if not self.__itag:
             self.__itag = itag
 
+    def __get_available_itag(self):
+        self.subject.select_detail()
+        self.__available_itag.append(
+            self.subject.selected_stream.itag
+        )
+
+    def __check_available_itag(self):
+        self.subject.itag = self.itag
+        while self.subject.selected_stream.itag is None:
+            for itag in self.__available_itag:
+                self.subject.itag = itag
+                if self.subject.selected_stream.itag is not None:
+                    return None
+            else:
+                self.__get_available_itag()
+
     def __check_duplicate_title(self):
         title = self.subject.title
         if title in self.__video_titles:
@@ -105,15 +121,14 @@ class Playlist:
                 else:
                     self.subject.title = new_title
                     break
+        self.__video_titles += (self.subject.title,)
 
     def set_url(self, url):
         if self.type == 'video':
             self.subject = Video(url)
         else:
             self.subject = Audio(url)
-        if not self.itag:
-            self.itag = self.subject.itag
-        self.subject.itag = self.itag
+        self.__check_available_itag()
         self.__subtype = self.subject.selected_stream.subtype
         self.subject.path = self.path
 
@@ -131,7 +146,6 @@ class Playlist:
             show_download_message(
                 self.subject.selected_stream.type, f": {self.subject.title}")
             self.subject.download()
-            self.__video_titles += (self.subject.title,)
         os.system(clear)
         print(green, end='')
         spelling(f"All {self.type.capitalize()}s are downloaded successfully.")

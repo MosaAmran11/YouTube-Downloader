@@ -21,14 +21,13 @@ def spelling(
     print(end or "", sep='', end='')
 
 
-def show_title(title, type: str = 'video'):
+def show_title(title, text: str = '{} title:\n', type: str = 'video'):
     spelling(
-        f"The title of {type.capitalize()} is:\n",
-        green,
-        title,
-        sep=None
+        text.format(type.capitalize()),
+        end=None
     )
-    print(rset, end='')
+    if len(title) > 50:
+        print(green, title, rset, sep='')
 
 
 def exit_message():
@@ -46,4 +45,4 @@ def show_download_message(media_type='video', text=''):
         'It may take a long time. Please wait...',
         sep='\n'
     )
-    print(rset)
+    print(rset, end='')

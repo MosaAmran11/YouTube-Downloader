@@ -8,7 +8,8 @@ try:
     from http.client import RemoteDisconnected
     import os
 except ImportError:
-    from .. import install_requirements
+    from install_requirements import main
+    main()
 
 
 class Video:
@@ -174,71 +175,67 @@ class Video:
         """Download video"""
         # Filter the title
         title = safe_filename(self.title)
-        try:
-            # Download progressive stream
-            if self.selected_stream.is_progressive:
-                # Set vdieo name with extension
-                video_unique_name = f"{title}_{self.resolution}.{self.extension}"
-                # Check if video doesn't exist
-                if not os.path.exists(os.path.join(self.path, video_unique_name)):
-                    # Download video
-                    self.streams.get_by_itag(self.itag).download(
-                        output_path=self.path, filename=video_unique_name, max_retries=3)
-            else:
-                # Set output path
-                final_path = os.path.join(
-                    self.path,
-                    f'{title}_{self.resolution}.{self.extension}'
+        # Download progressive stream
+        if self.selected_stream.is_progressive:
+            # Set vdieo name with extension
+            video_unique_name = f"{title}_{self.resolution}.{self.extension}"
+            # Check if video doesn't exist
+            if not os.path.exists(os.path.join(self.path, video_unique_name)):
+                # Download video
+                self.streams.get_by_itag(self.itag).download(
+                    output_path=self.path, filename=video_unique_name, max_retries=3)
+        else:
+            # Set output path
+            final_path = os.path.join(
+                self.path,
+                f'{title}_{self.resolution}.{self.extension}'
+            )
+            # Check if video exists
+            if os.path.exists(final_path):
+                return None
+            # Stream only audio
+            audio_stream = (
+                self.video.streams
+                .get_audio_only(None)
                 )
-                # Check if video exists
-                if os.path.exists(final_path):
-                    return None
-                # Stream only audio
-                audio_stream = (
-                    self.video.streams.filter(
-                        only_audio=True).order_by("abr").last()
-                )
-                # Set video name with extension
-                video_unique_name = _unique_name(
-                    title,
-                    self.selected_stream.subtype,
-                    'video',
-                    self.path
-                )
-                # Format audio name
-                audio_unique_name = _unique_name(
-                    title,
-                    audio_stream.subtype,
-                    'audio',
-                    self.path
-                )
-                # Download Only Video
-                self.selected_stream.download(
-                    output_path=self.path,
-                    filename=video_unique_name,
-                    max_retries=3
-                )
-                # Download Only Audio
-                audio_stream.download(
-                    output_path=self.path,
-                    filename=audio_unique_name,
-                    max_retries=3
-                )
-                ##############  MERGE SECSION   ##############
-                # Set video path
-                video_path = os.path.join(self.path, video_unique_name)
-                # Set audio path
-                audio_path = os.path.join(self.path, audio_unique_name)
-                # Merge Video with Audio into one Video file
-                merge_video(
-                    video_path,
-                    audio_path,
-                    final_path,
-                    self.selected_stream.fps
-                )
-        except KeyboardInterrupt:
-            print(red, "Exited by user.", rset)
-            exit()
+            # Set video name with extension
+            video_unique_name = _unique_name(
+                title,
+                self.selected_stream.subtype,
+                'video',
+                self.path
+            )
+            # Format audio name
+            audio_unique_name = _unique_name(
+                title,
+                audio_stream.subtype,
+                'audio',
+                self.path
+            )
+            # Download Only Video
+            self.selected_stream.download(
+                output_path=self.path,
+                filename=video_unique_name,
+                max_retries=3
+            )
+            # Download Only Audio
+            audio_stream.download(
+                output_path=self.path,
+                filename=audio_unique_name,
+                max_retries=3
+            )
+            ##############  MERGE SECSION   ##############
+            # Set video path
+            video_path = os.path.join(self.path, video_unique_name)
+            # Set audio path
+            audio_path = os.path.join(self.path, audio_unique_name)
+            # Merge Video with Audio into one Video file
+            merge_video(
+                video_path,
+                audio_path,
+                final_path,
+                self.selected_stream.fps
+            )
 
     def download_all_resolutions(self, subtype: str | None = None):
         """
