@@ -42,12 +42,12 @@ class Video:
         for _ in range(4):
             try:
                 self.__streams = self.video.streams.filter(
-                    only_video=True,
+                    type='video',
                     subtype='mp4'
                 )
                 if not self.__streams:
                     self.__streams = self.video.streams.filter(
-                        only_video=True
+                        type='video'
                     )
                 return self.__streams
             except RemoteDisconnected:
@@ -131,6 +131,7 @@ class Video:
                             "{:,.2f}".format(
                                 (stream.filesize + audfilesize) / (1024**2)),
                             stream.subtype,
+                            stream.is_progressive,
                             stream.itag
                             ])
         return details
@@ -143,6 +144,7 @@ class Video:
                   f"Resolution: {details[i][0]}",
                   f"Approx_Size: {details[i][1]} MB",
                   f"Format: {details[i][2]}",
+                  f"{green}No Combine" if details[i][3] else '',
                   rset,
                   sep='\t')
             sleep(0.08)
@@ -158,16 +160,16 @@ class Video:
                     # Set video resolution
                     self.__resolution = details[select - 1][0]
                     # Set video extesion
-                    self.__ext = details[select - 1][-2]
+                    self.__ext = details[select - 1][2]
                     # Set video itag
                     self.__itag = details[select - 1][-1]
                     # return None to break the while loop
                     # and quit from function
                     return None
                 else:
-                    print(red, "You entered a number out of range!")
+                    print(red, "You entered a number out of range!", sep='')
                     print("Please enter a number between 1 and",
-                          len(details) + 1, rset, sep='')
+                          len(details) + 1, rset)
             except ValueError:
                 print(red, "You have to enter only numbers!", rset, sep='')
 
@@ -175,21 +177,25 @@ class Video:
         """Download video"""
         # Filter the title
         title = safe_filename(self.title)
+        # Set output path
+        final_path = os.path.join(
+            self.path,
+            f'{title}_{self.resolution}.{self.extension}'
+        )
         # Download progressive stream
         if self.selected_stream.is_progressive:
             # Set vdieo name with extension
             video_unique_name = f"{title}_{self.resolution}.{self.extension}"
-            # Check if video doesn't exist
-            if not os.path.exists(os.path.join(self.path, video_unique_name)):
+            # Check if video exist
+            if os.path.exists(final_path):
+                if os.path.getsize(final_path) == 0:
+                    os.remove(final_path)
+                else:
+                    return None
                 # Download video
                 self.streams.get_by_itag(self.itag).download(
                     output_path=self.path, filename=video_unique_name, max_retries=3)
         else:
-            # Set output path
-            final_path = os.path.join(
-                self.path,
-                f'{title}_{self.resolution}.{self.extension}'
-            )
             # Check if video exists
             if os.path.exists(final_path):
                 return None

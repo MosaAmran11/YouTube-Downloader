@@ -49,7 +49,7 @@ def download(object: Video | Audio):
 
 def download_playlist(object: Playlist):
     system(clear)
-    show_title(object.title, object.type)
+    show_title(title=object.title, type=object.type)
     sleep(1)
     object.download()
     opendir(object.path)
@@ -61,13 +61,13 @@ try:
     url = input("\nEnter a YouTube Link -> ")
     url = check_url(url)
     system(clear)
-    video = ask_video_audio("Would you like to download as Video or Audio?")
     for _ in range(4):
         try:
             if is_playlist(url):
                 obj = Playlist(url)
                 break
             else:
+                video = ask_video_audio("Would you like to download as Video or Audio?")
                 if video:
                     obj = Video(url)
                 else:
@@ -85,6 +85,8 @@ try:
         download_playlist(obj)
     else:
         download(obj)
+    sleep(1)
+    exit()
 
 except KeyboardInterrupt:
     os.system(clear)

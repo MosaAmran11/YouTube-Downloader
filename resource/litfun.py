@@ -21,13 +21,16 @@ def spelling(
     print(end or "", sep='', end='')
 
 
-def show_title(title, text: str = '{} title:\n', type: str = 'video'):
+def show_title(title, type: str = 'video', text: str = '{} title:'):
     spelling(
-        text.format(type.capitalize()),
-        end=None
+        text.format(type.capitalize())
     )
     if len(title) > 50:
         print(green, title, rset, sep='')
+    else:
+        print(green, end='')
+        spelling(title)
+        print(rset, end='')
 
 
 def exit_message():

@@ -5,6 +5,7 @@ try:
     from video import Video
     from audio import Audio
     from gui import ask_video_audio
+    from time import sleep
     import os
 except ImportError:
     from install_requirements import main
@@ -145,7 +146,20 @@ class Playlist:
             os.system(clear)
             show_download_message(
                 self.subject.selected_stream.type, f": {self.subject.title}")
+            print(
+                yellow,
+                'Approxmate Size: {:,.2f} MB'.format(
+                (self.subject.selected_stream.filesize + 
+                (self.subject.video.streams.get_audio_only(None)
+                .filesize if self.subject.selected_stream.is_adaptive else 0))
+                / (1024**2)),
+                rset
+                )
             self.subject.download()
+            spelling(
+                f'The {self.type.capitalize()} is downloaded successfully'
+            )
+            sleep(1)
         os.system(clear)
         print(green, end='')
         spelling(f"All {self.type.capitalize()}s are downloaded successfully.")
