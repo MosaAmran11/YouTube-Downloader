@@ -31,6 +31,9 @@ class Video:
         self.__title = self.video.title
         return self.__title
 
+    def nothing(self):
+        self.video
+
     @title.setter
     def title(self, title):
         self.__title = title
@@ -140,13 +143,12 @@ class Video:
         details = self.get_details(adaptive=adaptive)
         print("\nSelect a resolution to download:")
         for i in range(len(details)):
-            print(f"{cyan}[{i + 1}]{yellow}",
-                  f"Resolution: {details[i][0]}",
-                  f"Approx_Size: {details[i][1]} MB",
-                  f"Format: {details[i][2]}",
+            print(f"{cyan}[{i + 1}]{yellow:2}",
+                  f"Resolution: {details[i][0]:20}",
+                  f"Approx_Size: {details[i][1]} MB{'':20}",
+                  f"Format: {details[i][2]:15}",
                   f"{green}No Combine" if details[i][3] else '',
-                  rset,
-                  sep='\t')
+                  rset)
             sleep(0.08)
         print(f"{cyan}[{len(details) + 1}]{blue}",
               "Download All resolutions", rset, sep='\t')
@@ -176,25 +178,25 @@ class Video:
     def download(self):
         """Download video"""
         # Filter the title
-        title = safe_filename(self.title)
+        self.title = safe_filename(self.title)
         # Set output path
         final_path = os.path.join(
             self.path,
-            f'{title}_{self.resolution}.{self.extension}'
+            f'{self.title}_{self.resolution}.{self.extension}'
         )
         # Download progressive stream
         if self.selected_stream.is_progressive:
             # Set vdieo name with extension
-            video_unique_name = f"{title}_{self.resolution}.{self.extension}"
+            video_unique_name = f"{self.title}_{self.resolution}.{self.extension}"
             # Check if video exist
             if os.path.exists(final_path):
                 if os.path.getsize(final_path) == 0:
                     os.remove(final_path)
                 else:
                     return None
-                # Download video
-                self.streams.get_by_itag(self.itag).download(
-                    output_path=self.path, filename=video_unique_name, max_retries=3)
+            # Download video
+            self.streams.get_by_itag(self.itag).download(
+                output_path=self.path, filename=video_unique_name, max_retries=3)
         else:
             # Check if video exists
             if os.path.exists(final_path):
@@ -206,14 +208,14 @@ class Video:
                 )
             # Set video name with extension
             video_unique_name = _unique_name(
-                title,
+                self.title,
                 self.selected_stream.subtype,
                 'video',
                 self.path
             )
             # Format audio name
             audio_unique_name = _unique_name(
-                title,
+                self.title,
                 audio_stream.subtype,
                 'audio',
                 self.path

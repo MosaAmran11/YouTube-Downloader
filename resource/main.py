@@ -7,6 +7,7 @@ from os import system
 from vars import *
 from litfun import *
 from http.client import IncompleteRead
+import pytube.exceptions as exceptions
 
 
 def is_playlist(url):
@@ -21,7 +22,7 @@ def check_url(link: str) -> str:
             if link.startswith(url):
                 return link
         else:
-            print(f'{red}That is not a YouTube url!{rset}')
+            print(f'{red}Not a YouTube url!{rset}')
             link = input(
                 f'{yellow}Please enter a valid YouTube url: {rset}')
 
@@ -55,46 +56,57 @@ def download_playlist(object: Playlist):
     opendir(object.path)
     exit_message()
 
-
-try:
-    system(clear)
-    url = input("\nEnter a YouTube Link -> ")
-    url = check_url(url)
-    system(clear)
-    for _ in range(4):
-        try:
-            if is_playlist(url):
-                obj = Playlist(url)
-                break
-            else:
-                video = ask_video_audio("Would you like to download as Video or Audio?")
-                if video:
-                    obj = Video(url)
+def main():
+    try:
+        system(clear)
+        url = input("\nEnter a YouTube Link -> ")
+        url = check_url(url)
+        system(clear)
+        for _ in range(4):
+            try:
+                if is_playlist(url):
+                    obj = Playlist(url)
+                    break
                 else:
-                    obj = Audio(url)
-                break
-        except:
-            print("Trying to reconnect...")
-            sleep(1)
-    else:
-        print(red, "Cannot connect to the server.", sep='')
-        print("Please check you interner connection and try again.", rset)
+                    video = ask_video_audio("Would you like to download as Video or Audio?")
+                    if video:
+                        obj = Video(url)
+                    else:
+                        obj = Audio(url)
+                    break
+            except:
+                print("Trying to reconnect...")
+                sleep(1)
+        else:
+            print(red, "Cannot connect to the server.", sep='')
+            print("Please check you interner connection and try again.", rset)
+            exit()
+
+        if isinstance(obj, Playlist):
+            download_playlist(obj)
+        else:
+            download(obj)
+        sleep(1)
         exit()
 
-    if isinstance(obj, Playlist):
-        download_playlist(obj)
-    else:
-        download(obj)
-    sleep(1)
-    exit()
-
-except KeyboardInterrupt:
-    os.system(clear)
-    print(red, "\n\tOperation cancelled by user", rset)
-    sleep(1)
-    exit()
-except IncompleteRead:
-    spelling(red, "Internet connection has inturrupted.")
-    spelling("Please check your internet connection and try again.", rset)
-    sleep(3)
-    exit()
+    except KeyboardInterrupt:
+        try:
+            os.system(clear)
+            os.remove(os.path.join(obj.path, f"{obj.title}.mp4"))
+        except:
+            pass
+        print(red, "\n\tOperation cancelled by user", rset)
+        sleep(1)
+        exit()
+    except IncompleteRead:
+        spelling(red, "Internet connection has inturrupted.")
+        spelling("Please check your internet connection and try again.", rset)
+        sleep(3)
+        exit()
+    except exceptions.RegexMatchError:
+        pass
+        # system(f'copy "cipher.py" {os.path.join(os.getenv("userprofile"),"Desktop")}')
+    except exceptions.AgeRestrictedError:
+        pass
+video = None
+main()

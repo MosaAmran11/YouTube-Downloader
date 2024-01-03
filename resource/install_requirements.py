@@ -17,6 +17,7 @@ def spelling(spell):
 
 
 def run_command(*CMD):
+    # Call the command with given arguments
     subprocess.run(
         [*CMD],
         capture_output=True

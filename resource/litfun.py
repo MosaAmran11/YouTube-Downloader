@@ -44,7 +44,7 @@ def exit_message():
 def show_download_message(media_type='video', text=''):
     print(cyan, end='')
     spelling(
-        f'Downloading the {media_type.capitalize()}{text}',
+        f'Downloading the {media_type.capitalize()} {text}',
         'It may take a long time. Please wait...',
         sep='\n'
     )
