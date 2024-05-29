@@ -10,8 +10,9 @@ def opendir(path: str) -> str:
         os.system(f'nautilus "{path}"')
 
 
-def select_dir(initialdir: Optional[str] = os.getcwd()) -> str:
+def select_dir(initialdir: Optional[str] = None) -> str:
     path = diropenbox(
+        msg='Select Folder',
         title='Select Folder',
         default=initialdir)
     return path
