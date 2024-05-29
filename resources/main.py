@@ -38,10 +38,10 @@ def download(object: Video | Audio):
     if ask_select_dir(message='Would you like to select a folder to download in?'):
         object.path = select_dir()
     system(clear)
-    show_download_message(obj_type)
+    print(blue, 'Getting information...', rset)
     object.download()
     system(clear)
-    print(green, end='')
+    print(green, end='\n'*2)
     spelling(f"The {obj_type.capitalize()} is downloaded successfully.")
     print(rset)
     opendir(object.path)
@@ -56,6 +56,7 @@ def download_playlist(object: Playlist):
     opendir(object.path)
     exit_message()
 
+
 def main():
     try:
         system(clear)
@@ -68,7 +69,8 @@ def main():
                     obj = Playlist(url)
                     break
                 else:
-                    video = ask_video_audio("Would you like to download as Video or Audio?")
+                    video = ask_video_audio(
+                        "Would you like to download as Video or Audio?")
                     if video:
                         obj = Video(url)
                     else:
@@ -79,7 +81,7 @@ def main():
                 sleep(1)
         else:
             print(red, "Cannot connect to the server.", sep='')
-            print("Please check you interner connection and try again.", rset)
+            print("Please check you internet connection and try again.", rset)
             exit()
 
         if isinstance(obj, Playlist):
@@ -99,7 +101,7 @@ def main():
         sleep(1)
         exit()
     except IncompleteRead:
-        spelling(red, "Internet connection has inturrupted.")
+        spelling(red, "Internet connection has interrupted.")
         spelling("Please check your internet connection and try again.", rset)
         sleep(3)
         exit()
@@ -108,5 +110,7 @@ def main():
         # system(f'copy "cipher.py" {os.path.join(os.getenv("userprofile"),"Desktop")}')
     except exceptions.AgeRestrictedError:
         pass
+
+
 video = None
 main()

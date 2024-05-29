@@ -129,12 +129,12 @@ class Video(YouTube):
         for stream in self.streams.filter(type=self.type, subtype=self.subtype, adaptive=adaptive):
             if not stream.is_progressive:
                 audfilesize = self.streams.filter(
-                    only_audio=True).order_by("abr").last().filesize
+                    only_audio=True).order_by("abr").last()._filesize_mb
             else:
                 audfilesize = 0
             details.append([stream.resolution,
                             "{:,.2f}".format(
-                                (stream.filesize + audfilesize) / (1024**2)),
+                                (stream.filesize_mb + audfilesize)),
                             stream.subtype,
                             stream.is_progressive,
                             stream.itag
@@ -192,6 +192,7 @@ class Video(YouTube):
                 os.remove(file_path)
             else:
                 return None
+        show_download_message(self.type)
         # Download progressive stream
         if self.selected_stream.is_progressive:
             # Download video
@@ -255,7 +256,7 @@ class Video(YouTube):
         if streams is None:
             print(
                 yellow,
-                'Could not find the media type "%s" ' %
+                f'Could not find the media type "{self.type}" ',
                 'Downloading default media type...',
                 subtype,
                 rset,
@@ -276,10 +277,10 @@ class Video(YouTube):
             )
             self.download()
 
-    @staticmethod
-    def __check_title(title: str):
-        # Only allowed chars !@&+=(){}[]-_
-        specialChar = "#$%^;'.,/\\:*?\"<>|~"
-        for char in specialChar:
-            title = title.replace(char, "")
-        return title
+    # @staticmethod
+    # def __check_title(title: str):
+    #     # Only allowed chars !@&+=(){}[]-_
+    #     specialChar = "#$%^;'.,/\\:*?\"<>|~"
+    #     for char in specialChar:
+    #         title = title.replace(char, "")
+    #     return title

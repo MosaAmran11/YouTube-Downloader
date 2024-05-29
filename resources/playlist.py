@@ -12,32 +12,30 @@ except ImportError:
     main()
 
 
-class Playlist:
+class Playlist(plt):
     def __init__(self, url) -> None:
+        super().__init__(url)
         self.playlist = plt(url)
-        self.__title = self.playlist.title
+        # self.__title = self.playlist.title
         self.__video_titles = tuple()
         self.__type = 'playlist'
         self.__subtype = None
         self.subject = None
-        self.__video_urls = None
+        # self.__video_urls = None
         self.__path = None
         self.__itag = None
         self.__available_itag = list()
 
-    @property
-    def title(self):
-        if self.__title:
-            return self.__title
-        self.__title = self.playlist.title
-        return self.__title
+    # @property
+    # def title(self):
+    #     if self.__title:
+    #         return self.__title
+    #     self.__title = self.playlist.title
+    #     return self.__title
 
     @property
     def video_urls(self):
-        if self.__video_urls:
-            return self.__video_urls
-        self.__video_urls = self.playlist.video_urls
-        return self.__video_urls
+        return self.playlist.video_urls
 
     @property
     def path(self):
@@ -139,22 +137,22 @@ class Playlist:
             self.__type = self.type
         for url in self.video_urls:
             os.system(clear)
-            spelling(
+            print(
                 cyan, f"Loading {self.type.capitalize()} information...", rset)
             self.set_url(url)
             self.__check_duplicate_title()
             os.system(clear)
-            show_download_message(
-                self.subject.selected_stream.type, f": {self.subject.title}")
+            print(cyan,
+                  self.subject.selected_stream.type, f": {self.subject.title}", rset)
             print(
                 yellow,
-                'Approxmate Size: {:,.2f} MB'.format(
-                (self.subject.selected_stream.filesize + 
-                (self.subject.video.streams.get_audio_only(None)
-                .filesize if self.subject.selected_stream.is_adaptive else 0))
-                / (1024**2)),
+                'Approximate Size: {:,.2f} MB'.format(
+                    (self.subject.selected_stream.filesize +
+                     (self.subject.streams.get_audio_only(None)
+                      .filesize if self.subject.selected_stream.is_adaptive else 0))
+                    / (1024**2)),
                 rset
-                )
+            )
             self.subject.download()
             spelling(
                 f'The {self.type.capitalize()} is downloaded successfully'

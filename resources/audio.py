@@ -24,9 +24,9 @@ class Audio(Video):
         if self.__selected_stream:
             return self.__selected_stream
         self.__selected_stream = (
-            self.video.streams
+            super().streams
             .get_audio_only(None)
-            )
+        )
         return self.__selected_stream
 
     @property
@@ -42,32 +42,23 @@ class Audio(Video):
             self.__itag = itag
 
     def download(self):
-        title = safe_filename(self.title)
-        audio_unique_name = _unique_name(
-            title,
-            self.selected_stream.subtype,
-            'audio',
-            self.path
-        )
-        # Set output path
-        final_path = os.path.join(
-            self.path,
-            f'{title}.mp3'
-        )
+        self.title = safe_filename(self.title)
+        audio_name = f'{self.title}({self.selected_stream.abr})'
+        # Set output filename with path
+        file_path = os.path.join(self.path, f"{audio_name}.mp3")
         # Check if audio exists
-        if os.path.exists(final_path):
+        if os.path.exists(file_path):
             return None
-        # Set audio path
-        audio_path = os.path.join(
-            self.path,
-            audio_unique_name
-        )
+        show_download_message(self.type)
         self.selected_stream.download(
             output_path=self.path,
-            filename=audio_unique_name,
+            filename=f'{audio_name}.{self.selected_stream.subtype}',
             max_retries=3
         )
         convert_audio(
-            audio_path,
-            final_path
+            os.path.join(
+                self.path, f'{audio_name}.{self.selected_stream.subtype}'),
+            file_path,
+            # The convert function accepts 'k' only; not 'kbps'
+            bitrate=self.selected_stream.abr.replace('bps', '')
         )
