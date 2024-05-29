@@ -11,7 +11,7 @@ def merge_video(vidname: str, audname: str, outname: str, fps=30):
     os.remove(audname)
 
 
-def convert_audio(audname: str, outname: str):
-    my_audio = mpe.AudioFileClip(audname)
-    my_audio.write_audiofile(outname)
-    os.remove(audname)
+def convert_audio(filename: str, output: str, bitrate: str = None):
+    my_audio = mpe.AudioFileClip(filename)
+    my_audio.write_audiofile(filename=output, bitrate=bitrate)
+    os.remove(filename)
