@@ -25,12 +25,7 @@ def show_title(title, type: str = 'video', text: str = '{} title:'):
     print(
         text.format(type.capitalize())
     )
-    if len(title) > 50:
-        print(green, title, rset, sep='')
-    else:
-        print(green, end='')
-        print(title)
-        print(rset, end='')
+    print(green, title, rset)
 
 
 def exit_message():

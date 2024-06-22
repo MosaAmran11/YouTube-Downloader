@@ -5,7 +5,7 @@ try:
     from time import sleep
     from litfun import show_download_message
     from vars import *
-    from http.client import RemoteDisconnected
+    from http.client import IncompleteRead
     import os
 except ImportError:
     from install_requirements import main
@@ -15,50 +15,49 @@ except ImportError:
 class Audio(Video):
     def __init__(self, url: str) -> None:
         super().__init__(url)
-        self.__selected_stream = None
-        self.__itag = None
         self.type = 'audio'
 
     @property
-    def selected_stream(self):
-        if self.__selected_stream:
-            return self.__selected_stream
-        self.__selected_stream = (
-            super().streams
-            .get_audio_only(None)
-        )
-        return self.__selected_stream
-
-    @property
-    def itag(self):
-        if self.__itag:
-            return self.__itag
-        self.__itag = self.selected_stream.itag
-        return self.__itag
-
-    @itag.setter
-    def itag(self, itag):
-        if not self.__itag:
-            self.__itag = itag
+    def subtype(self):
+        if self._subtype is None:
+            self._subtype = self.audio_stream.subtype
+        return self._subtype
 
     def download(self):
+        '''Download the Audio'''
         self.title = safe_filename(self.title)
-        audio_name = f'{self.title}({self.selected_stream.abr})'
+        # Audio name to be saved
+        audio_name = f'{self.title} ({self.audio_stream.abr}).mp3'
         # Set output filename with path
-        file_path = os.path.join(self.path, f"{audio_name}.mp3")
+        audio_path = os.path.join(self.path, audio_name)
+        # Audio file with temp name to download
+        temp_file_name = _unique_name(
+            self.title,
+            self.subtype,
+            'audio',
+            self.path
+        )
+        # Set temp audio file path
+        temp_file_path = os.path.join(self.path, temp_file_name)
+
         # Check if audio exists
-        if os.path.exists(file_path):
+        if os.path.exists(audio_path):
             return None
         show_download_message(self.type)
-        self.selected_stream.download(
-            output_path=self.path,
-            filename=f'{audio_name}.{self.selected_stream.subtype}',
-            max_retries=3
-        )
-        convert_audio(
-            os.path.join(
-                self.path, f'{audio_name}.{self.selected_stream.subtype}'),
-            file_path,
-            # The convert function accepts 'k' only; not 'kbps'
-            bitrate=self.selected_stream.abr.replace('bps', '')
-        )
+        try:
+            self.audio_stream.download(
+                output_path=self.path,
+                filename=temp_file_name,
+                max_retries=3
+            )
+            convert_audio(temp_file_path, audio_path,
+                          # The convert function accepts 'k' only; not 'kbps'
+                          bitrate=self.audio_stream.abr.replace('bps', '')
+                          )
+        except KeyboardInterrupt or IncompleteRead:
+            try:
+                # Delete downloaded files
+                os.remove(audio_path)
+                os.remove(temp_file_path)
+            except:
+                pass

@@ -32,26 +32,28 @@ def download(object: Video | Audio):
     system(clear)
     show_title(title=object.title, type=obj_type)
     sleep(0.5)
-    if video:
-        spelling(cyan, f"Loading {obj_type.capitalize()} information...", rset)
-        object.select_detail()
+    # if video:
+    #     print(cyan, f"Getting {obj_type.capitalize()} information...", rset)
+    # object.select_detail()
     if ask_select_dir(message='Would you like to select a folder to download in?'):
         object.path = select_dir()
-    system(clear)
-    print(blue, 'Getting information...', rset)
+    # system(clear)
+    print(blue, f'Getting {obj_type.capitalize()} information...', rset)
     object.download()
     system(clear)
-    print(green, end='\n'*2)
-    spelling(f"The {obj_type.capitalize()} is downloaded successfully.")
-    print(rset)
+    print(green,
+          f"The {obj_type.capitalize()} has been downloaded successfully.",
+          rset, sep='\n')
     opendir(object.path)
     exit_message()
 
 
 def download_playlist(object: Playlist):
     system(clear)
-    show_title(title=object.title, type=object.type)
+    show_title(title=object.title, type=type(object).__name__.capitalize())
     sleep(1)
+    if ask_select_dir(message='Would you like to select a folder to download in?'):
+        object.path = select_dir()
     object.download()
     opendir(object.path)
     exit_message()
@@ -94,22 +96,22 @@ def main():
     except KeyboardInterrupt:
         try:
             os.system(clear)
-            os.remove(os.path.join(obj.path, f"{obj.title}.mp4"))
+            os.remove(os.path.join(
+                obj.path, f"{obj.title} ({obj.resolution}).{obj.subtype}"))
         except:
             pass
         print(red, "\n\tOperation cancelled by user", rset)
         sleep(1)
         exit()
     except IncompleteRead:
-        spelling(red, "Internet connection has interrupted.")
-        spelling("Please check your internet connection and try again.", rset)
+        print(red, "Internet connection has interrupted.")
+        print("Please check your internet connection and try again.", rset)
         sleep(3)
         exit()
-    except exceptions.RegexMatchError:
-        pass
-        # system(f'copy "cipher.py" {os.path.join(os.getenv("userprofile"),"Desktop")}')
-    except exceptions.AgeRestrictedError:
-        pass
+    except exceptions.RegexMatchError as e:
+        print(red, e, rset)
+    except exceptions.AgeRestrictedError as e:
+        print(red, e, rset)
 
 
 video = None

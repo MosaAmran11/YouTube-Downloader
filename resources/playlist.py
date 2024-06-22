@@ -1,12 +1,12 @@
 try:
     from pytube import Playlist as plt
     from vars import *
-    from litfun import show_download_message, spelling
     from video import Video
     from audio import Audio
     from gui import ask_video_audio
     from time import sleep
     import os
+    from concurrent.futures import ProcessPoolExecutor
 except ImportError:
     from install_requirements import main
     main()
@@ -15,150 +15,140 @@ except ImportError:
 class Playlist(plt):
     def __init__(self, url) -> None:
         super().__init__(url)
-        self.playlist = plt(url)
-        # self.__title = self.playlist.title
-        self.__video_titles = tuple()
-        self.__type = 'playlist'
-        self.__subtype = None
-        self.subject = None
-        # self.__video_urls = None
-        self.__path = None
-        self.__itag = None
-        self.__available_itag = list()
-
-    # @property
-    # def title(self):
-    #     if self.__title:
-    #         return self.__title
-    #     self.__title = self.playlist.title
-    #     return self.__title
+        self._object_type = ask_video_audio(
+            'Would you like to download the Playlist as Video or Audio?')
+        self._object = None
+        self._path = None
+        self._itag = None
+        self._resolution = None
+        self._subtype = None
+        self._video_urls = None
 
     @property
     def video_urls(self):
-        return self.playlist.video_urls
+        if self._video_urls is None:
+            self._video_urls = self.url_generator()
+        return self._video_urls
 
     @property
     def path(self):
-        if self.__path:
-            return self.__path
-        APP_NAME = "Youtube Downloader MAA"
-        if os.name == 'nt':
-            userprofile = os.getenv("userprofile")
-            path = str(os.path.join(
-                userprofile, 'Downloads', APP_NAME, "Playlist", self.title))
-        else:
-            userprofile = os.getenv("USER") if os.getenv(
-                'SUDO_USER') is None else os.getenv('SUDO_USER')
-            path = str(os.path.join(
-                "/", "home", userprofile, "Downloads", APP_NAME, "Playlist", self.title))
-            os.makedirs(path, exist_ok=True)
-        self.__path = path
-        return self.__path
+        if self._path is None:
+            APP_NAME = "Youtube Downloader MAA"
+            userprofile = os.getenv(
+                "userprofile") if os.name == 'nt' else f'/home/{os.getenv("USER")}'
+            self._path = str(os.path.join(
+                userprofile, 'Downloads',
+                APP_NAME, type(self).__name__.capitalize(), self.title))
+            os.makedirs(self._path, exist_ok=True)
+        return self._path
 
     @path.setter
-    def path(self, path):
-        self.__path = path
+    def path(self, value):
+        self._path = value
 
     @property
-    def type(self):
-        if self.__type:
-            return self.__type
-        if ask_video_audio(
-            "Would you like to download the playlist as Videos or Audios?"
-        ):
-            self.__type = 'video'
-        else:
-            self.__type = 'audio'
-        if not self.path.endswith(self.__type.capitalize()):
-            self.path = os.path.join(self.path, self.__type.capitalize())
-        return self.__type
+    def object(self):
+        if self._object is None:
+            self._object = self.create_object()
+        return self._object
+
+    @object.deleter
+    def object(self):
+        self._object = None
 
     @property
-    def subtype(self):
-        if self.__subtype:
-            return self.__subtype
-        self.set_url()
-        return self.__subtype
+    def object_path(self):
+        if not self.path.endswith(os.path.join(self.title, self.object.type.capitalize())):
+            self.path = os.path.join(
+                self.path, self.title, self.object.type.capitalize())
+        return self.path
 
     @property
     def itag(self):
-        if self.__itag:
-            return self.__itag
-        self.__itag = self.subject.itag
-        return self.__itag
+        if self._itag is None:
+            self._itag = self.object.itag
+        return self._itag
 
     @itag.setter
     def itag(self, itag):
-        if not self.__itag:
-            self.__itag = itag
+        if not self._itag:
+            self._itag = itag
 
-    def __get_available_itag(self):
-        self.subject.select_detail()
-        self.__available_itag.append(
-            self.subject.selected_stream.itag
-        )
+    @property
+    def resolution(self):
+        if self._resolution is None:
+            self._resolution = self.object.resolution
+        return self._resolution
 
-    def __check_available_itag(self):
-        self.subject.itag = self.itag
-        while self.subject.selected_stream.itag is None:
-            for itag in self.__available_itag:
-                self.subject.itag = itag
-                if self.subject.selected_stream.itag is not None:
-                    return None
-            else:
-                self.__get_available_itag()
+    @property
+    def subtype(self):
+        if self._subtype is None:
+            self._subtype = self.object.selected_stream.subtype
+        return self._subtype
 
-    def __check_duplicate_title(self):
-        title = self.subject.title
-        if title in self.__video_titles:
-            expand = 1
-            while True:
-                expand += 1
-                new_title = f'{title} ({expand})'
-                if new_title in self.__video_titles:
-                    continue
-                else:
-                    self.subject.title = new_title
-                    break
-        self.__video_titles += (self.subject.title,)
+    def create_object(self):
+        return (Video(next(self.video_urls))
+                if self._object_type is True  # True means Video, False means Audio
+                else Audio(next(self.video_urls))
+                )
 
-    def set_url(self, url):
-        if self.type == 'video':
-            self.subject = Video(url)
+    def initial_properties(self):
+        self.object.path = self.object_path
+        self.itag
+        self.resolution
+        self.subtype
+
+    def _check_available_itag(self):
+        if self.object.selected_stream is not None:
+            return None
+
+        sorted_streams = self.object.streams.asc()
+        available_itags = [
+            stream.itag for stream in sorted_streams]
+
+        for itag in available_itags:
+            if itag < self.itag:
+                self.object.itag = itag
+                return None
+
+        available_resolutions = [
+            stream.resolution for stream in sorted_streams]
+
+        for resolution in available_resolutions:
+            if int(resolution.rstrip('p')) <= int(self.resolution.rstrip('p')):
+                self.object.itag = self.object.streams.filter(
+                    resolution=resolution).last().itag
+                return None
         else:
-            self.subject = Audio(url)
-        self.__check_available_itag()
-        self.__subtype = self.subject.selected_stream.subtype
-        self.subject.path = self.path
+            print(yellow, f'This {self.object.type.capitalize()} does not match the selected resolution\n',
+                  'Please select from the following available resolutions:', rset)
+            self.object.select_detail()
 
     def download(self):
-        if self.type == 'playlist':
-            self.__type = None
-            self.__type = self.type
-        for url in self.video_urls:
-            os.system(clear)
-            print(
-                cyan, f"Loading {self.type.capitalize()} information...", rset)
-            self.set_url(url)
-            self.__check_duplicate_title()
+        for _ in range(self.length):
+            print('\n')
+            self.object  # Create the object if None
+            # print(cyan,
+            #       f"Getting {self.object.type.capitalize()} information...",
+            #       rset)
             os.system(clear)
             print(cyan,
-                  self.subject.selected_stream.type, f": {self.subject.title}", rset)
+                  self.object.type.capitalize(),
+                  f"title: {self.object.title}",
+                  rset)
             print(
-                yellow,
-                'Approximate Size: {:,.2f} MB'.format(
-                    (self.subject.selected_stream.filesize +
-                     (self.subject.streams.get_audio_only(None)
-                      .filesize if self.subject.selected_stream.is_adaptive else 0))
-                    / (1024**2)),
-                rset
+                blue, f'\nGetting {self.object.type.capitalize()} information...', rset)
+            self.initial_properties()
+            self.object.itag = self.itag
+            self._check_available_itag()
+            self.object.download()
+            print(
+                f'The {self.object.type.capitalize()} has been downloaded successfully'
             )
-            self.subject.download()
-            spelling(
-                f'The {self.type.capitalize()} is downloaded successfully'
-            )
+            if _ < self.length - 1:  # If the object is the last, don't delete it
+                del self.object  # Delete the current object to download the next one
             sleep(1)
         os.system(clear)
-        print(green, end='')
-        spelling(f"All {self.type.capitalize()}s are downloaded successfully.")
-        print(rset)
+        print(green,
+              f"All {self.object.type.capitalize()}s are downloaded successfully.",
+              rset)
