@@ -1,4 +1,4 @@
-from easygui import ynbox, diropenbox, choicebox
+from easygui import ynbox, diropenbox
 from typing import Optional
 import os
 
@@ -11,11 +11,10 @@ def opendir(path: str) -> str:
 
 
 def select_dir(initialdir: Optional[str] = None) -> str:
-    path = diropenbox(
+    return diropenbox(
         msg='Select Folder',
         title='Select Folder',
         default=initialdir)
-    return path
 
 
 def ask_select_dir(message: str,
@@ -31,8 +30,11 @@ def ask_video_audio(
     return True for Video, False for Audio
     """
     ask = ynbox(msg=message, title=title, choices=(
-        "[<F1>]Video", "[<F2>]Audio"))
+        "[<F1>]Video", "[<F2>]Audio"),
+        default_choice="[<F1>]Video",
+        cancel_choice="[<F2>]Audio")
     if ask is None:
         return True
     else:
         return ask
+    # return messagebox.askquestion(title, message)

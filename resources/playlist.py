@@ -5,8 +5,8 @@ try:
     from audio import Audio
     from gui import ask_video_audio
     from time import sleep
+    import threading
     import os
-    from concurrent.futures import ProcessPoolExecutor
 except ImportError:
     from install_requirements import main
     main()
@@ -15,20 +15,13 @@ except ImportError:
 class Playlist(plt):
     def __init__(self, url) -> None:
         super().__init__(url)
-        self._object_type = ask_video_audio(
-            'Would you like to download the Playlist as Video or Audio?')
         self._object = None
+        self._object_type = None
         self._path = None
         self._itag = None
         self._resolution = None
         self._subtype = None
         self._video_urls = None
-
-    @property
-    def video_urls(self):
-        if self._video_urls is None:
-            self._video_urls = self.url_generator()
-        return self._video_urls
 
     @property
     def path(self):
@@ -48,20 +41,27 @@ class Playlist(plt):
 
     @property
     def object(self):
-        if self._object is None:
-            self._object = self.create_object()
         return self._object
+
+    @object.setter
+    def object(self, value):
+        self._object = value
 
     @object.deleter
     def object(self):
         self._object = None
 
     @property
+    def object_type(self):
+        if self._object_type is None:
+            self._object_type = ask_video_audio(
+                'Would you like to download the Playlist as Video or Audio?')
+        return self._object_type
+
+    @property
     def object_path(self):
-        if not self.path.endswith(os.path.join(self.title, self.object.type.capitalize())):
-            self.path = os.path.join(
-                self.path, self.title, self.object.type.capitalize())
-        return self.path
+        return os.path.join(
+            self.path, self.title, self.object.type.capitalize())
 
     @property
     def itag(self):
@@ -80,74 +80,103 @@ class Playlist(plt):
             self._resolution = self.object.resolution
         return self._resolution
 
-    @property
-    def subtype(self):
-        if self._subtype is None:
-            self._subtype = self.object.selected_stream.subtype
-        return self._subtype
+    # @property
+    # def subtype(self):
+    #     if self._subtype is None:
+    #         self._subtype = self.object.selected_stream.subtype
+    #     return self._subtype
 
-    def create_object(self):
-        return (Video(next(self.video_urls))
-                if self._object_type is True  # True means Video, False means Audio
-                else Audio(next(self.video_urls))
+    def create_object(self, url):
+        return (Video(url)
+                if self.object_type  # True means Video, False means Audio
+                else Audio(url)
                 )
 
-    def initial_properties(self):
-        self.object.path = self.object_path
-        self.itag
-        self.resolution
-        self.subtype
-
-    def _check_available_itag(self):
-        if self.object.selected_stream is not None:
+    def get_available_itag(self, object: Video | Audio):
+        if isinstance(object, Audio):
             return None
+        if object.streams.get_by_itag(self.itag) is not None:
+            return self.itag
 
-        sorted_streams = self.object.streams.asc()
+        sorted_streams = object.streams.asc()
         available_itags = [
             stream.itag for stream in sorted_streams]
 
         for itag in available_itags:
             if itag < self.itag:
-                self.object.itag = itag
-                return None
+                return itag
 
         available_resolutions = [
             stream.resolution for stream in sorted_streams]
 
         for resolution in available_resolutions:
             if int(resolution.rstrip('p')) <= int(self.resolution.rstrip('p')):
-                self.object.itag = self.object.streams.filter(
-                    resolution=resolution).last().itag
-                return None
-        else:
-            print(yellow, f'This {self.object.type.capitalize()} does not match the selected resolution\n',
-                  'Please select from the following available resolutions:', rset)
-            self.object.select_detail()
+                return object.streams.filter(
+                    resolution=resolution).first().itag
+
+    def select_detail(self, object: Video | Audio):
+        details = [(stream.resolution,
+                    stream.subtype,
+                    stream.itag) for stream in object.streams]
+        print("\nSelect a resolution to download:")
+        sleep(1)
+
+        for i in range(len(details)):
+            print(f"{cyan}[{i + 1}]{yellow}",
+                  f"Resolution: {details[i][0]:10}",
+                  f"Format: {details[i][1]}",
+                  rset, sep='\t')
+        while True:
+            try:
+                select = int(input("\nEnter the number of resolution: "))
+                if 0 < select <= len(details) + 1:
+                    # Set video resolution
+                    self._resolution = details[select - 1][0]
+                    # Set video extension
+                    self._subtype = details[select - 1][1]
+                    # Set video itag
+                    self._itag = details[select - 1][-1]
+                    # return None to break the while loop
+                    # and quit from function
+                    return None
+                else:
+                    print(red, "You entered a number out of range!", sep='')
+                    print(f"Please enter a number between 1 and {len(details)}",
+                          rset)
+            except ValueError:
+                print(
+                    red, "You have to enter only the number that represents the resolution!", rset, sep='')
+
+    def process_object(self, url, output_dir):
+        object = self.create_object(url)
+        object.itag = self.get_available_itag(object)
+        object.path = output_dir
+        print(cyan,
+              f"{object.type.capitalize()} title: {object.title}",
+              f'{blue}Getting information...',
+              rset, sep='\n')
+        object.download()
+        print(f'{yellow}Done: {object.title}', rset)
 
     def download(self):
-        for _ in range(self.length):
-            print('\n')
-            self.object  # Create the object if None
-            # print(cyan,
-            #       f"Getting {self.object.type.capitalize()} information...",
-            #       rset)
-            os.system(clear)
-            print(cyan,
-                  self.object.type.capitalize(),
-                  f"title: {self.object.title}",
-                  rset)
-            print(
-                blue, f'\nGetting {self.object.type.capitalize()} information...', rset)
-            self.initial_properties()
-            self.object.itag = self.itag
-            self._check_available_itag()
-            self.object.download()
-            print(
-                f'The {self.object.type.capitalize()} has been downloaded successfully'
-            )
-            if _ < self.length - 1:  # If the object is the last, don't delete it
-                del self.object  # Delete the current object to download the next one
-            sleep(1)
+        self._object = self.create_object(self.video_urls[0])
+        if isinstance(self.object, Video):
+            self.select_detail(self.object)
+        threads = []
+        for i in range(0, self.length, 2):
+            batch = self.video_urls[i:i+2]
+            # Start a thread for each download in the batch
+            threads = [threading.Thread(
+                target=self.process_object, args=(url, self.object_path)) for url in batch]
+
+            # Start all threads in the batch
+            for thread in threads:
+                thread.start()
+
+            # Wait for all threads in the batch to complete
+            for thread in threads:
+                thread.join()
+
         os.system(clear)
         print(green,
               f"All {self.object.type.capitalize()}s are downloaded successfully.",

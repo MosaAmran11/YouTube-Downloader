@@ -4,7 +4,7 @@ try:
     from pytube.cli import _unique_name, safe_filename
     from convert import merge_video
     from time import sleep
-    from litfun import show_download_message
+    from literal_functions import show_download_message
     from vars import *
     from http.client import RemoteDisconnected
     import os
@@ -76,10 +76,6 @@ class Video(YouTube):
     def path(self, value):
         self._path = value
 
-    # @path.deleter
-    # def path(self):
-    #     delattr(self, '_path')
-
     @property
     def subtype(self):
         if self._subtype is None:
@@ -96,29 +92,22 @@ class Video(YouTube):
     def itag(self, value):
         self._itag = value
 
-    # Method for user to get video's details
-    def get_details(self):
-        audio_file_size = super().streams.filter(
-            only_audio=True).order_by("abr").last().filesize_mb
-        return [(stream.resolution,
-                 "{:,.2f}".format(
-                     (stream.filesize_mb + audio_file_size)
-                 ),
-                 stream.subtype,
-                 stream.is_progressive,
-                 stream.itag) for stream in self.streams]
+    def select_detail(self):
+        details = [(stream.resolution,
+                    "{:,.2f}".format(
+                        (stream.filesize_mb + self.audio_stream.filesize_mb)
+                    ),
+                    stream.subtype,
+                    stream.itag) for stream in self.streams]
 
-    def select_detail(self, adaptive: bool = None):
-        details = self.get_details()
         print("\nSelect a resolution to download:")
+        sleep(1)
         for i in range(len(details)):
             print(f"{cyan}[{i + 1}]{yellow}",
                   f"Resolution: {details[i][0]:10}",
                   f"Approx_Size: {details[i][1]} MB{'':10}",
                   f"Format: {details[i][2]:15}",
-                  #   f"{green}No Combine" if details[i][3] else '',
                   rset, sep='\t')
-            sleep(0.08)
         print(f"{cyan}[{len(details) + 1}]{blue}",
               "Download All resolutions", rset, sep='\t')
         while True:
@@ -154,67 +143,46 @@ class Video(YouTube):
             self.path,
             video_name
         )
-        # Video file with temp name to download
-        temp_file_name = _unique_name(
-            self.title,
-            self.subtype,
-            'video',
-            self.path
-        )
-        # Set temp video file path
-        temp_file_path = os.path.join(self.path, temp_file_name)
 
         # Check if video exists
         if os.path.exists(video_path):
             return None
 
-        # Set audio name
-        audio_name = _unique_name(
-            self.title,
-            self.audio_stream.subtype,
-            'audio',
-            self.path
-        )
-        # Set audio path
-        audio_path = os.path.join(self.path, audio_name)
-
         show_download_message(self.type)
         try:
             # Download Only Video
-            self.selected_stream.download(
+            temp_file_path = self.selected_stream.download(
                 output_path=self.path,
-                filename=temp_file_name,
+                filename_prefix='video_',
                 max_retries=3
             )
             # Download Only Audio
-            self.audio_stream.download(
+            audio_path = self.audio_stream.download(
                 output_path=self.path,
-                filename=audio_name,
+                filename_prefix='audio_',
                 max_retries=3
             )
-            ##############  MERGE SECTION   ##############
-            # Merge Video with Audio into one Video file
             merge_video(
                 temp_file_path,
                 audio_path,
                 video_path,
                 self.selected_stream.fps
             )
+            os.system(clear)
         except KeyboardInterrupt or IncompleteRead:
             try:
                 # Delete downloaded files
-                os.remove(video_path)
+                os.remove(temp_file_path)
                 os.remove(audio_path)
                 os.remove(video_path)
             except:
                 pass
 
-    def download_all_resolutions(self, subtype: str | None = None):
+    def download_all_resolutions(self, subtype: str | None = "webm"):
         """
         Download all available resolutions with a specific format
         :param str subtype:
             To specify a format. For example: "mp4", "webm"
-            Default: download all available types
         """
         for _ in range(4):
             try:

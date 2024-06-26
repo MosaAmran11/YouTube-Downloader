@@ -102,7 +102,3 @@ def main():
     spelling("All requirements are installed successfully.")
     sleep(2)
     os.system(clear)
-
-
-if __name__ == "__main__":
-    main()

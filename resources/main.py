@@ -1,13 +1,18 @@
-from video import Video
-from audio import Audio
-from playlist import Playlist
-from time import sleep
-from gui import *
-from os import system
-from vars import *
-from litfun import *
-from http.client import IncompleteRead
-import pytube.exceptions as exceptions
+try:
+    from video import Video
+    from audio import Audio
+    from playlist import Playlist
+    from time import sleep
+    from gui import *
+    from os import system
+    from vars import *
+    from literal_functions import *
+    from http.client import IncompleteRead
+    from urllib.error import URLError
+    import pytube.exceptions as exceptions
+except ImportError:
+    from install_requirements import main
+    main()
 
 
 def is_playlist(url):
@@ -28,9 +33,8 @@ def check_url(link: str) -> str:
 
 
 def download(object: Video | Audio):
-    obj_type = type(object).__name__
     system(clear)
-    show_title(title=object.title, type=obj_type)
+    show_title(title=object.title, type=object.type)
     sleep(0.5)
     # if video:
     #     print(cyan, f"Getting {obj_type.capitalize()} information...", rset)
@@ -38,11 +42,11 @@ def download(object: Video | Audio):
     if ask_select_dir(message='Would you like to select a folder to download in?'):
         object.path = select_dir()
     # system(clear)
-    print(blue, f'Getting {obj_type.capitalize()} information...', rset)
+    print(blue, f'Getting {object.type.capitalize()} information...', rset)
     object.download()
     system(clear)
     print(green,
-          f"The {obj_type.capitalize()} has been downloaded successfully.",
+          f"The {object.type.capitalize()} has been downloaded successfully.",
           rset, sep='\n')
     opendir(object.path)
     exit_message()
@@ -50,12 +54,12 @@ def download(object: Video | Audio):
 
 def download_playlist(object: Playlist):
     system(clear)
-    show_title(title=object.title, type=type(object).__name__.capitalize())
+    show_title(title=object.title, type='playlist')
     sleep(1)
     if ask_select_dir(message='Would you like to select a folder to download in?'):
         object.path = select_dir()
     object.download()
-    opendir(object.path)
+    opendir(object.object_path)
     exit_message()
 
 
@@ -86,11 +90,13 @@ def main():
             print("Please check you internet connection and try again.", rset)
             exit()
 
-        if isinstance(obj, Playlist):
-            download_playlist(obj)
-        else:
-            download(obj)
-        sleep(1)
+        try:
+            if isinstance(obj, Playlist):
+                download_playlist(obj)
+            else:
+                download(obj)
+        except URLError:
+            print(red, 'No internet connection', rset)
         exit()
 
     except KeyboardInterrupt:

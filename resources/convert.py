@@ -1,17 +1,23 @@
-import moviepy.editor as mpe
+import imageio_ffmpeg as ffmpeg
+import subprocess
 import os
+from vars import clear
 
 
-def merge_video(vidname: str, audname: str, outname: str, fps=30):
-    my_clip = mpe.VideoFileClip(vidname)
-    audio_background = mpe.AudioFileClip(audname)
-    final_clip = my_clip.set_audio(audio_background)
-    final_clip.write_videofile(outname, fps=fps)
-    os.remove(vidname)
-    os.remove(audname)
+ffmpeg_path = ffmpeg.get_ffmpeg_exe()
 
 
-def convert_audio(filename: str, output: str, bitrate: str = None):
-    my_audio = mpe.AudioFileClip(filename)
-    my_audio.write_audiofile(filename=output, bitrate=bitrate)
-    os.remove(filename)
+def merge_video(video_path: str, audio_path: str, output_path: str, fps=30):
+    command = [ffmpeg_path, '-i', video_path, '-i', audio_path, '-c:v',
+               'copy', '-r', str(fps), '-c:a', 'aac', '-strict', 'experimental', output_path]
+    subprocess.run(command, check=True)
+    os.remove(video_path)
+    os.remove(audio_path)
+    os.system(clear)
+
+
+def convert_audio(input_file: str, output_file: str, bitrate: str = '192k'):
+    command = [ffmpeg_path, '-i', input_file, '-b:a', bitrate, output_file]
+    subprocess.run(command, check=True)
+    os.remove(input_file)
+    os.system(clear)
