@@ -4,10 +4,8 @@ import os
 
 
 def opendir(path: str) -> str:
-    if os.name == 'nt':
-        os.system(f'explorer "{path}"')
-    else:
-        os.system(f'nautilus "{path}"')
+    os.system(f'explorer "{path}"') if os.name == 'nt' else os.system(
+        f'nautilus "{path}"')
 
 
 def select_dir(initialdir: Optional[str] = None) -> str:
@@ -33,8 +31,4 @@ def ask_video_audio(
         "[<F1>]Video", "[<F2>]Audio"),
         default_choice="[<F1>]Video",
         cancel_choice="[<F2>]Audio")
-    if ask is None:
-        return True
-    else:
-        return ask
-    # return messagebox.askquestion(title, message)
+    return True if ask is None else ask

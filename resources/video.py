@@ -8,6 +8,7 @@ try:
     from vars import *
     from http.client import RemoteDisconnected
     import os
+    import sys
 except ImportError:
     from install_requirements import main
     main()
@@ -31,8 +32,12 @@ class Video(YouTube):
             for _ in range(4):
                 try:
                     self._streams = super().streams.filter(
-                        type=self.type,
-                        adaptive=True)
+                        only_video=True,
+                        adaptive=True, subtype='webm')
+                    if self._streams is None:
+                        self._streams = super().streams.filter(
+                            only_video=True,
+                            adaptive=True)
                     break
                 except RemoteDisconnected:
                     print("Trying to connect...")
@@ -65,7 +70,7 @@ class Video(YouTube):
         if self._path is None:
             APP_NAME = "Youtube Downloader MAA"
             userprofile = os.getenv(
-                "userprofile") if os.name == 'nt' else f'/home/{os.getenv("USER")}'
+                "userprofile") if sys.platform == 'win32' else os.getenv("HOME")
             self._path = str(os.path.join(
                 userprofile, 'Downloads',
                 APP_NAME, self.type.capitalize()))
@@ -75,6 +80,14 @@ class Video(YouTube):
     @path.setter
     def path(self, value):
         self._path = value
+
+    @property
+    def file_path(self):
+        """Get the final path to download in with safe file name"""
+        return os.path.join(
+            self.path,
+            f'{safe_filename(self.title)} ({self.resolution}).mp4'
+        )
 
     @property
     def subtype(self):
@@ -94,6 +107,7 @@ class Video(YouTube):
 
     def select_detail(self):
         details = [(stream.resolution,
+                    stream.fps,
                     "{:,.2f}".format(
                         (stream.filesize_mb + self.audio_stream.filesize_mb)
                     ),
@@ -105,22 +119,20 @@ class Video(YouTube):
         for i in range(len(details)):
             print(f"{cyan}[{i + 1}]{yellow}",
                   f"Resolution: {details[i][0]:10}",
-                  f"Approx_Size: {details[i][1]} MB{'':10}",
-                  f"Format: {details[i][2]:15}",
+                  f"FPS: {details[i][1]}\t",
+                  f"Approx_Size: {details[i][2]} MB{'':10}",
+                  #   f"Format: {details[i][3]:15}",
                   rset, sep='\t')
-        print(f"{cyan}[{len(details) + 1}]{blue}",
-              "Download All resolutions", rset, sep='\t')
+        # print(f"{cyan}[{len(details) + 1}]{blue}",
+        #       "Download All resolutions", rset, sep='\t')
         while True:
             try:
                 select = int(input("\nEnter the number of resolution: "))
-                if 0 < select <= len(details) + 1:
-                    if select == len(details) + 1:
-                        self.download_all_resolutions()
-                        return None
+                if 0 < select <= len(details):
                     # Set video resolution
                     self._resolution = details[select - 1][0]
                     # Set video extension
-                    self._subtype = details[select - 1][2]
+                    self._subtype = details[select - 1][3]
                     # Set video itag
                     self._itag = details[select - 1][-1]
                     # return None to break the while loop
@@ -129,20 +141,13 @@ class Video(YouTube):
                 else:
                     print(red, "You entered a number out of range!", sep='')
                     print("Please enter a number between 1 and",
-                          len(details) + 1, rset)
+                          len(details), rset)
             except ValueError:
                 print(red, "You have to enter only numbers!", rset, sep='')
 
     def download(self):
         """Download video"""
-        self.title = safe_filename(self.title)
-        # Video name to be saved
-        video_name = f'{self.title} ({self.resolution}).{self.subtype}'
-        # Set target path with filename
-        video_path = os.path.join(
-            self.path,
-            video_name
-        )
+        video_path = self.file_path
 
         # Check if video exists
         if os.path.exists(video_path):
@@ -169,7 +174,7 @@ class Video(YouTube):
                 self.selected_stream.fps
             )
             os.system(clear)
-        except KeyboardInterrupt or IncompleteRead:
+        except:
             try:
                 # Delete downloaded files
                 os.remove(temp_file_path)
@@ -194,15 +199,15 @@ class Video(YouTube):
             print("Cannot connect to server. Exiting.")
             exit()
         if streams is None:
-            print(
-                yellow,
-                f'Could not find the media type "{self.type}" ',
-                'Downloading default media type...',
-                subtype,
-                rset,
-                sep='',
-                end=''
-            )
+            #     print(
+            #         yellow,
+            #         f'Could not find the media type "{self.type}" ',
+            #         'Downloading default media type...',
+            #         subtype,
+            #         rset,
+            #         sep='',
+            #         end=''
+            #     )
             streams = self.streams.filter(adaptive=True, subtype="mp4")
         for stream in streams:
             self._itag = stream.itag

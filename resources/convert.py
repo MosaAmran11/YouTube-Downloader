@@ -9,7 +9,7 @@ ffmpeg_path = ffmpeg.get_ffmpeg_exe()
 
 def merge_video(video_path: str, audio_path: str, output_path: str, fps=30):
     command = [ffmpeg_path, '-i', video_path, '-i', audio_path, '-c:v',
-               'copy', '-r', str(fps), '-c:a', 'aac', '-strict', 'experimental', output_path]
+               'copy', '-r', str(fps), '-c:a', 'copy', '-strict', 'experimental', output_path]
     subprocess.run(command, check=True)
     os.remove(video_path)
     os.remove(audio_path)

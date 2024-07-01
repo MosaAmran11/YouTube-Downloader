@@ -7,6 +7,7 @@ try:
     from time import sleep
     import threading
     import os
+    import sys
 except ImportError:
     from install_requirements import main
     main()
@@ -28,16 +29,16 @@ class Playlist(plt):
         if self._path is None:
             APP_NAME = "Youtube Downloader MAA"
             userprofile = os.getenv(
-                "userprofile") if os.name == 'nt' else f'/home/{os.getenv("USER")}'
+                "userprofile") if sys.platform == 'win32' else os.getenv("HOME")
             self._path = str(os.path.join(
                 userprofile, 'Downloads',
-                APP_NAME, type(self).__name__.capitalize(), self.title))
+                APP_NAME, 'playlist'.capitalize(), self.title))
             os.makedirs(self._path, exist_ok=True)
         return self._path
 
     @path.setter
     def path(self, value):
-        self._path = value
+        self._path = os.path.join(value, self.title)
 
     @property
     def object(self):
@@ -61,7 +62,7 @@ class Playlist(plt):
     @property
     def object_path(self):
         return os.path.join(
-            self.path, self.title, self.object.type.capitalize())
+            self.path, self.object.type.capitalize())
 
     @property
     def itag(self):
@@ -79,12 +80,6 @@ class Playlist(plt):
         if self._resolution is None:
             self._resolution = self.object.resolution
         return self._resolution
-
-    # @property
-    # def subtype(self):
-    #     if self._subtype is None:
-    #         self._subtype = self.object.selected_stream.subtype
-    #     return self._subtype
 
     def create_object(self, url):
         return (Video(url)
@@ -116,6 +111,7 @@ class Playlist(plt):
 
     def select_detail(self, object: Video | Audio):
         details = [(stream.resolution,
+                    stream.fps,
                     stream.subtype,
                     stream.itag) for stream in object.streams]
         print("\nSelect a resolution to download:")
@@ -124,7 +120,7 @@ class Playlist(plt):
         for i in range(len(details)):
             print(f"{cyan}[{i + 1}]{yellow}",
                   f"Resolution: {details[i][0]:10}",
-                  f"Format: {details[i][1]}",
+                  f"FPS: {details[i][1]}",
                   rset, sep='\t')
         while True:
             try:
@@ -133,7 +129,7 @@ class Playlist(plt):
                     # Set video resolution
                     self._resolution = details[select - 1][0]
                     # Set video extension
-                    self._subtype = details[select - 1][1]
+                    self._subtype = details[select - 1][2]
                     # Set video itag
                     self._itag = details[select - 1][-1]
                     # return None to break the while loop
@@ -149,12 +145,12 @@ class Playlist(plt):
 
     def process_object(self, url, output_dir):
         object = self.create_object(url)
-        object.itag = self.get_available_itag(object)
-        object.path = output_dir
         print(cyan,
               f"{object.type.capitalize()} title: {object.title}",
               f'{blue}Getting information...',
               rset, sep='\n')
+        object.itag = self.get_available_itag(object)
+        object.path = output_dir
         object.download()
         print(f'{yellow}Done: {object.title}', rset)
 
@@ -164,7 +160,7 @@ class Playlist(plt):
             self.select_detail(self.object)
         threads = []
         for i in range(0, self.length, 2):
-            batch = self.video_urls[i:i+2]
+            batch = [url for url in self.video_urls][i:i+2]
             # Start a thread for each download in the batch
             threads = [threading.Thread(
                 target=self.process_object, args=(url, self.object_path)) for url in batch]

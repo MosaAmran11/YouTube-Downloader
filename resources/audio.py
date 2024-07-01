@@ -18,6 +18,12 @@ class Audio(Video):
         self.type = 'audio'
 
     @property
+    def file_path(self):
+        """Get the final path to download in with safe file name"""
+        audio_name = f'{safe_filename(self.title)} ({self.audio_stream.abr}).mp3'
+        return os.path.join(self.path, audio_name)
+
+    @property
     def subtype(self):
         if self._subtype is None:
             self._subtype = self.audio_stream.subtype
@@ -25,11 +31,7 @@ class Audio(Video):
 
     def download(self):
         '''Download the Audio'''
-        self.title = safe_filename(self.title)
-        # Audio name to be saved
-        audio_name = f'{self.title} ({self.audio_stream.abr}).mp3'
-        # Set output filename with path
-        audio_path = os.path.join(self.path, audio_name)
+        audio_path = self.file_path
 
         # Check if audio exists
         if os.path.exists(audio_path):
@@ -46,19 +48,10 @@ class Audio(Video):
                           # The convert function accepts 'k' only; not 'kbps'
                           bitrate=self.audio_stream.abr.rstrip('bps')
                           )
-            os.system(clear)
-            print(
-                f'The {self.type.capitalize()} has been downloaded successfully'
-            )
         except KeyboardInterrupt or IncompleteRead:
             try:
                 # Delete downloaded files
-                os.remove(audio_path)
                 os.remove(temp_file_path)
-            except Exception as e:
-                print(e)
-
-    # def merge(self, audio_path, output_path):
-    #     """Convert audio to the desire format and save to output path"""
-    #     convert_audio(audio_path, output_path,
-    #                   bitrate=self.audio_stream.abr.rstrip('bps'))
+                os.remove(audio_path)
+            except:
+                pass
