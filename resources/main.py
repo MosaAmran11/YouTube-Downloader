@@ -78,7 +78,7 @@ def main():
         print(red, 'No internet connection', rset)
         sleep(2)
     except exceptions.RegexMatchError or exceptions.AgeRestrictedError as e:
-        print(red, e, rset)
+        print(red, 'Something wrong happened:\n', e, rset, sep='')
 
 
 main()

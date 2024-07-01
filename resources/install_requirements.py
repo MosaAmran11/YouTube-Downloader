@@ -78,27 +78,21 @@ def install(package, *packages):
 
 def main():
     try:
-        try:
-            from pytube import YouTube
-            import easygui
-            from moviepy.editor import VideoFileClip
-        except ImportError:
-            os.system(clear)
-            print("Some requirements will be installed to run this application.")
-            input("Press enter to continue...")
-            os.system(clear)
-
-            requirements = os.path.join(path, 'requirements.txt')
-            spelling("Installing the requirements...")
-            spelling("This operation may take a while. Please wait...")
-            install(requirements)
-
-        except:
-            check_requirements()
+        upgrade_pip_command = [sys.executable, '-m',
+                               'pip', 'install', '--upgrade', 'pip']
+        requirements_path = os.path.join(
+            os.path.dirname(__file__), 'requirements.txt')
+        install_requirements_command = [sys.executable, '-m', 'pip',
+                                        'install', '-r', requirements_path]
+        subprocess.run(upgrade_pip_command)
+        subprocess.run(install_requirements_command)
     except KeyboardInterrupt:
         print("Operation cancelled by user")
         exit()
 
+    os.system(clear)
     spelling("All requirements are installed successfully.")
     sleep(2)
-    os.system(clear)
+
+
+main()
