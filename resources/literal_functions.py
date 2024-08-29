@@ -21,18 +21,18 @@ def spelling(
     print(end or "", sep='', end='')
 
 
-def show_title(title, type: str = 'video', text: str = '{} title:'):
+def show_title(title, subtype: str = 'video', text: str = '{} title:'):
     print(
-        text.format(type.capitalize())
+        text.format(subtype.capitalize())
     )
-    print(green, title, rset)
+    print(green, title, reset)
 
 
 def exit_message():
-    print(yellow, 'Thanks for using our YouTube Downloader.', rset)
-    print(cyan, '\tMADE BY MAA\t'.center(50, "#"), rset)
+    print(yellow, 'Thanks for using our YouTube Downloader.', reset)
+    print(cyan, '\tMADE BY MAA\t'.center(50, "#"), reset)
     sleep(0.8)
-    print(f'{red}Exiting from downloader...{rset}')
+    print(f'{red}Exiting from downloader...{reset}')
     sleep(0.8)
 
 
@@ -43,4 +43,4 @@ def show_download_message(media_type='video', text=''):
         'It may take a long time. Please wait...',
         sep='\n'
     )
-    print(rset, end='')
+    print(reset, end='')

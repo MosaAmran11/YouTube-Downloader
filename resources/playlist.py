@@ -110,49 +110,49 @@ class Playlist(plt):
                     resolution=resolution).first().itag
 
     def select_detail(self, object: Video | Audio):
-        details = [(stream.resolution,
-                    stream.fps,
-                    stream.subtype,
-                    stream.itag) for stream in object.streams]
+        details = [{'reso': stream.resolution,
+                    'fps': stream.fps,
+                    'subtype': stream.subtype,
+                    'itag': stream.itag} for stream in object.streams]
         print("\nSelect a resolution to download:")
         sleep(1)
 
-        for i in range(len(details)):
-            print(f"{cyan}[{i + 1}]{yellow}",
-                  f"Resolution: {details[i][0]:10}",
-                  f"FPS: {details[i][1]}",
-                  rset, sep='\t')
+        for i, detail in enumerate(details, 1):
+            print(f"{cyan}[{i}]{yellow}",
+                  f"Resolution: {detail['reso']:10}",
+                  f"FPS: {detail['fps']}",
+                  reset, sep='\t')
         while True:
             try:
                 select = int(input("\nEnter the number of resolution: "))
                 if 0 < select <= len(details) + 1:
                     # Set video resolution
-                    self._resolution = details[select - 1][0]
+                    self._resolution = details[select - 1]['reso']
                     # Set video extension
-                    self._subtype = details[select - 1][2]
+                    self._subtype = details[select - 1]['subtype']
                     # Set video itag
-                    self._itag = details[select - 1][-1]
+                    self._itag = details[select - 1]['itag']
                     # return None to break the while loop
                     # and quit from function
                     return None
                 else:
                     print(red, "You entered a number out of range!", sep='')
                     print(f"Please enter a number between 1 and {len(details)}",
-                          rset)
+                          reset)
             except ValueError:
                 print(
-                    red, "You have to enter only the number that represents the resolution!", rset, sep='')
+                    red, "You have to enter only the number that represents the resolution!", reset, sep='')
 
     def process_object(self, url, output_dir):
         object = self.create_object(url)
         print(cyan,
               f"{object.type.capitalize()} title: {object.title}",
               f'{blue}Getting information...',
-              rset, sep='\n')
+              reset, sep='\n')
         object.itag = self.get_available_itag(object)
         object.path = output_dir
         object.download()
-        print(f'{yellow}Done: {object.title}', rset)
+        print(f'{yellow}Done: {object.title}', reset)
 
     def download(self):
         self._object = self.create_object(self.video_urls[0])
@@ -176,4 +176,4 @@ class Playlist(plt):
         os.system(clear)
         print(green,
               f"All {self.object.type.capitalize()}s are downloaded successfully.",
-              rset)
+              reset)

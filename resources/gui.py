@@ -22,7 +22,7 @@ def ask_select_dir(message: str,
 
 def ask_video_audio(
     message: str = "Video or Audio?",
-    title: str = 'Select a type'
+    title: str = 'Select a subtype'
 ) -> bool:
     """
     return True for Video, False for Audio

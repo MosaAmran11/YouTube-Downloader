@@ -1,17 +1,20 @@
-try:
-    from http.client import IncompleteRead
-    from pytube import YouTube
-    from pytube.cli import _unique_name, safe_filename
-    from convert import merge_video
-    from time import sleep
-    from literal_functions import show_download_message
-    from vars import *
-    from http.client import RemoteDisconnected
-    import os
-    import sys
-except ImportError:
-    from install_requirements import main
-    main()
+# try:
+import os
+import sys
+from http.client import RemoteDisconnected
+from time import sleep
+
+from pytube import YouTube
+from pytube.cli import safe_filename
+
+from convert import merge_video
+from literal_functions import show_download_message
+from vars import *
+
+
+# except ImportError:
+#     from install_requirements import main
+#     main()
 
 
 class Video(YouTube):
@@ -68,12 +71,12 @@ class Video(YouTube):
     @property
     def path(self):
         if self._path is None:
-            APP_NAME = "Youtube Downloader MAA"
+            app_name = "Youtube Downloader MAA"
             userprofile = os.getenv(
                 "userprofile") if sys.platform == 'win32' else os.getenv("HOME")
             self._path = str(os.path.join(
                 userprofile, 'Downloads',
-                APP_NAME, self.type.capitalize()))
+                app_name, self.type.capitalize()))
             os.makedirs(self._path, exist_ok=True)
         return self._path
 
@@ -106,44 +109,41 @@ class Video(YouTube):
         self._itag = value
 
     def select_detail(self):
-        details = [(stream.resolution,
-                    stream.fps,
-                    "{:,.2f}".format(
+        details = [{'reso': stream.resolution,
+                    'fps': stream.fps,
+                    'size': "{:,.2f}".format(
                         (stream.filesize_mb + self.audio_stream.filesize_mb)
                     ),
-                    stream.subtype,
-                    stream.itag) for stream in self.streams]
+                    'subtype': stream.subtype,
+                    'itag': stream.itag} for stream in self.streams]
 
         print("\nSelect a resolution to download:")
         sleep(1)
-        for i in range(len(details)):
-            print(f"{cyan}[{i + 1}]{yellow}",
-                  f"Resolution: {details[i][0]:10}",
-                  f"FPS: {details[i][1]}\t",
-                  f"Approx_Size: {details[i][2]} MB{'':10}",
-                  #   f"Format: {details[i][3]:15}",
-                  rset, sep='\t')
-        # print(f"{cyan}[{len(details) + 1}]{blue}",
-        #       "Download All resolutions", rset, sep='\t')
+        for i, detail in enumerate(details, 1):
+            print(f"{cyan}[{i}]{yellow}",
+                  f"Resolution: {detail['reso']:10}",
+                  f"FPS: {detail['fps']}\t",
+                  f"Approx_Size: {detail['size']} MB{'':10}",
+                  reset, sep='\t')
         while True:
             try:
                 select = int(input("\nEnter the number of resolution: "))
                 if 0 < select <= len(details):
                     # Set video resolution
-                    self._resolution = details[select - 1][0]
+                    self._resolution = details[select - 1]['reso']
                     # Set video extension
-                    self._subtype = details[select - 1][3]
+                    self._subtype = details[select - 1]['subtype']
                     # Set video itag
-                    self._itag = details[select - 1][-1]
+                    self._itag = details[select - 1]['itag']
                     # return None to break the while loop
                     # and quit from function
                     return None
                 else:
                     print(red, "You entered a number out of range!", sep='')
                     print("Please enter a number between 1 and",
-                          len(details), rset)
+                          len(details), reset)
             except ValueError:
-                print(red, "You have to enter only numbers!", rset, sep='')
+                print(red, "You have to enter only numbers!", reset, sep='')
 
     def download(self):
         """Download video"""
@@ -201,10 +201,10 @@ class Video(YouTube):
         if streams is None:
             #     print(
             #         yellow,
-            #         f'Could not find the media type "{self.type}" ',
-            #         'Downloading default media type...',
+            #         f'Could not find the media subtype "{self.subtype}" ',
+            #         'Downloading default media subtype...',
             #         subtype,
-            #         rset,
+            #         reset,
             #         sep='',
             #         end=''
             #     )
@@ -218,6 +218,6 @@ class Video(YouTube):
                 self.path = os.path.join(self.path, safe_filename(self.title))
             show_download_message(
                 media_type=stream.type,
-                text=f'with resolution: {yellow}{self.resolution}{rset}'
+                text=f'with resolution: {yellow}{self.resolution}{reset}'
             )
             self.download()
