@@ -16,10 +16,10 @@ def spelling(spell):
     print()
 
 
-def run_command(*CMD):
+def run_command(*cmd):
     # Call the command with given arguments
     subprocess.run(
-        [*CMD],
+        [*cmd],
         capture_output=True
     )
 

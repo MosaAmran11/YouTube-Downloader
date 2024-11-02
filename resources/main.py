@@ -21,12 +21,22 @@ def is_playlist(url):
 
 
 def check_url(link: str) -> str:
-    valid_url = ("https://www.youtube.com/", "youtube.com/",
-                 "www.youtube.com/", "https://youtu.be/", "youtu.be/", "https://youtube.com/")
+    valid_urls = (
+        "https://www.youtube.com/",
+        "youtube.com/",
+        "www.youtube.com/",
+        "https://youtu.be/", "youtu.be/",
+        "https://youtube.com/",
+        "https://music.youtube.com",
+        "music.youtube.com"
+    )
     while True:
-        for url in valid_url:
+        for url in valid_urls:
             if link.startswith(url):
-                return link
+                return (
+                    link.replace("music.youtube.com", "youtube.com")
+                    if "music.youtube.com" in link else link
+                )
         else:
             print(f'{red}Not a YouTube url!{reset}')
             link = input(

@@ -3,8 +3,8 @@ from typing import Optional
 import os
 
 
-def opendir(path: str) -> str:
-    os.system(f'explorer "{path}"') if os.name == 'nt' else os.system(
+def opendir(path: str) -> int:
+    return os.system(f'explorer "{path}"') if os.name == 'nt' else os.system(
         f'nautilus "{path}"')
 
 

@@ -27,12 +27,12 @@ class Playlist(plt):
     @property
     def path(self):
         if self._path is None:
-            APP_NAME = "Youtube Downloader MAA"
+            app_name = "Youtube Downloader MAA"
             userprofile = os.getenv(
                 "userprofile") if sys.platform == 'win32' else os.getenv("HOME")
             self._path = str(os.path.join(
                 userprofile, 'Downloads',
-                APP_NAME, 'playlist'.capitalize(), self.title))
+                app_name, 'playlist'.capitalize(), self.title))
             os.makedirs(self._path, exist_ok=True)
         return self._path
 

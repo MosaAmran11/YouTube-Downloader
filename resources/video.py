@@ -1,6 +1,7 @@
 # try:
 import os
 import sys
+from paths import Paths
 from http.client import RemoteDisconnected
 from time import sleep
 
@@ -27,7 +28,8 @@ class Video(YouTube):
         self._path = None
         self._subtype = None
         self._itag = None
-        self.type = 'video'
+        self.type: str = 'video'
+        self.preferred_extension: str = 'mp4'
 
     @property
     def streams(self):
@@ -59,7 +61,11 @@ class Video(YouTube):
     @property
     def audio_stream(self):
         if self._audio_stream is None:
-            self._audio_stream = super().streams.get_audio_only(None)
+            self._audio_stream = (
+                super().streams.filter(only_audio=True)
+                .order_by("abr")
+                .last()
+            )
         return self._audio_stream
 
     @property
@@ -69,14 +75,15 @@ class Video(YouTube):
         return self._resolution
 
     @property
-    def path(self):
+    def path(self) -> str:
         if self._path is None:
-            app_name = "Youtube Downloader MAA"
-            userprofile = os.getenv(
-                "userprofile") if sys.platform == 'win32' else os.getenv("HOME")
-            self._path = str(os.path.join(
-                userprofile, 'Downloads',
-                app_name, self.type.capitalize()))
+            app_name: str = "Youtube Downloader MAA"
+            downloads_folder_path: str = Paths.get_referenced_folder(
+                'Downloads') if sys.platform == 'win32' else os.path.join(
+                os.getenv("HOME"), 'Downloads')
+            self._path: str = os.path.normpath(os.path.join(
+                downloads_folder_path, app_name,
+                self.type.capitalize()))
             os.makedirs(self._path, exist_ok=True)
         return self._path
 
@@ -89,8 +96,7 @@ class Video(YouTube):
         """Get the final path to download in with safe file name"""
         return os.path.join(
             self.path,
-            f'{safe_filename(self.title)} ({self.resolution}).mp4'
-        )
+            f'{safe_filename(self.title)} ({self.resolution}).{self.preferred_extension}')
 
     @property
     def subtype(self):
